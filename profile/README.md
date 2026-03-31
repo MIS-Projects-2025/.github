@@ -105,7 +105,7 @@ bash /var/www/scripts/setup-app-perms.sh <app-folder-name>
 
 ```
 
-> See [Scripts Reference](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#scripts-reference) for what this script does.
+> See [Scripts Reference](#scripts-reference) for what this script does.
 
 If `bootstrap/cache` does not exist yet (fresh clone), create it first:
 
@@ -377,7 +377,7 @@ Keep a running record here to avoid port collisions.
 |8200|authify|
 |8300|store|
 
-> When assigning a new port, pick the next available number and add a row to this table.
+> When assigning a new port, pick the next available number and add a row to this table. If you forgot this step, I'll be sad...
 
 ----------
 

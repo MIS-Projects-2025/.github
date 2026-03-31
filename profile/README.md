@@ -1,4 +1,3 @@
-
 # Adding a New Laravel App to the MIS Infrastructure
 
 This guide covers the complete process of deploying a new Laravel application to the MIS server (`MIS-WS02` / `192.168.2.221`) running Docker + nginx + PHP-FPM on WSL2.
@@ -16,8 +15,9 @@ This guide covers the complete process of deploying a new Laravel application to
     -   [Step 4 — Update `docker-compose.yml`](#step-4--update-docker-composeyml)
     -   [Step 5 — Add an nginx Server Block](#step-5--add-an-nginx-server-block)
     -   [Step 6 — Install Composer Dependencies](#step-6--install-composer-dependencies)
-    -   [Step 7 — Bootstrap the Application](#step-7--bootstrap-the-application)
-    -   [Step 8 — Restart Docker Services](#step-8--restart-docker-services)
+    -   [Step 7 — Build Frontend Assets](#step-7--build-frontend-assets)
+    -   [Step 8 — Bootstrap the Application](#step-8--bootstrap-the-application)
+    -   [Step 9 — Restart Docker Services](#step-9--restart-docker-services)
 4.  [Scripts Reference](#scripts-reference)
 5.  [Port Assignments](#port-assignments)
 6.  [Troubleshooting](#troubleshooting)
@@ -53,7 +53,7 @@ Before adding a new app, make sure the following are in place:
 ├── php/
 │   ├── Dockerfile            # Shared PHP-FPM 8.2 image (used by all apps)
 │   ├── opcache.ini           # OPcache configuration
-│   └── entrypoint.sh        # Container entrypoint
+│   └── entrypoint.sh         # Container entrypoint
 │
 ├── docker-compose.yml        # All services defined here
 │
@@ -161,7 +161,7 @@ Open `.env` in VS Code (via Remote SSH or `code .env`) and configure at minimum:
 ```dotenv
 APP_NAME="Your App Name"
 APP_ENV=production
-APP_KEY=                        # Leave blank — generated in Step 7
+APP_KEY=                        # Leave blank — generated in Step 8
 APP_DEBUG=false
 APP_URL=http://192.168.2.221:<port>
 
@@ -274,9 +274,30 @@ docker compose exec <app-folder-name> composer install --no-dev --optimize-autol
 
 ----------
 
-### Step 7 — Bootstrap the Application
+### Step 7 — Build Frontend Assets
 
-Still exec'd inside the container (or using `docker compose exec`), run the standard Laravel setup commands:
+Node.js runs on the **WSL2 host**, not inside the PHP-FPM container, so these commands run directly in the app directory — no `docker compose exec` needed.
+
+```bash
+cd /var/www/<app-folder-name>
+npm install
+npm run build
+
+```
+
+`npm run build` invokes Vite, which compiles and fingerprints all JS/CSS assets into `public/build/`. The manifest file it generates (`public/build/manifest.json`) is what Laravel uses at runtime to resolve hashed asset filenames.
+
+> **Don't skip this step.** Without a build, the app will either serve no styles/scripts or throw a `Vite manifest not found` exception.
+
+#### If the app uses the `caseInsensitiveResolver` Vite plugin
+
+Check `vite.config.js` — if the plugin is present (as it is in the PPC Portal), no extra action is needed; it runs automatically as part of `npm run build`. If you're setting up a new app and deploying to Linux for the first time, copy the plugin from an existing app to avoid case-sensitivity import failures. See [Linux case sensitivity breaking imports](#linux-case-sensitivity-breaking-imports).
+
+----------
+
+### Step 8 — Bootstrap the Application
+
+Run the standard Laravel setup commands via `docker compose exec`:
 
 ```bash
 # Generate the application key (fills APP_KEY in .env)
@@ -299,7 +320,7 @@ docker compose exec <app-folder-name> php artisan view:cache
 
 ----------
 
-### Step 8 — Restart Docker Services
+### Step 9 — Restart Docker Services
 
 Bring up the full stack so nginx picks up the new config and all services are running:
 
@@ -401,6 +422,7 @@ Usually a Laravel misconfiguration.
 
 ### Blank page or missing assets
 
+-   Make sure `npm run build` was run and `public/build/` exists
 -   Make sure `php artisan storage:link` was run
 -   Make sure `public/` is the nginx `root`, not `/var/www` or the app root
 

@@ -397,6 +397,7 @@ Keep a running record here to avoid port collisions.
 |8199|ppc|
 |8200|authify|
 |8300|store|
+|8301|management-log|
 
 > When assigning a new port, pick the next available number and add a row to this table. If you forgot this step, I'll be sad...
 

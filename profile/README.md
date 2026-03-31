@@ -1,0 +1,461 @@
+
+# Adding a New Laravel App to the MIS Infrastructure
+
+This guide covers the complete process of deploying a new Laravel application to the MIS server (`MIS-WS02` / `192.168.2.221`) running Docker + nginx + PHP-FPM on WSL2.
+
+----------
+
+## Table of Contents
+
+1.  [Prerequisites](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#prerequisites)
+2.  [Infrastructure Overview](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#infrastructure-overview)
+3.  [Step-by-Step Deployment](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#step-by-step-deployment)
+    -   [Step 1 — Clone the Repository](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#step-1--clone-the-repository)
+    -   [Step 2 — Set File Permissions](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#step-2--set-file-permissions)
+    -   [Step 3 — Configure the Environment File](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#step-3--configure-the-environment-file)
+    -   [Step 4 — Update `docker-compose.yml`](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#step-4--update-docker-composeyml)
+    -   [Step 5 — Add an nginx Server Block](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#step-5--add-an-nginx-server-block)
+    -   [Step 6 — Install Composer Dependencies](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#step-6--install-composer-dependencies)
+    -   [Step 7 — Bootstrap the Application](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#step-7--bootstrap-the-application)
+    -   [Step 8 — Restart Docker Services](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#step-8--restart-docker-services)
+4.  [Scripts Reference](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#scripts-reference)
+5.  [Port Assignments](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#port-assignments)
+6.  [Troubleshooting](#troubleshooting)
+	-   [502 Bad Gateway](#502-bad-gateway)
+	-   [500 Internal Server Error](#500-internal-server-error)
+	-   [Blank page or missing assets](#blank-page-or-missing-assets)
+	-   [DB connection refused inside container](#db-connection-refused-inside-container)
+	-   [Changes to default.conf not reflected](#changes-to-defaultconf-not-reflected)
+	-   [Stray newline after <?php causing silent failures](#stray-newline-after-php-causing-silent-failures)
+	-   [Linux case sensitivity breaking imports](#linux-case-sensitivity-breaking-imports)
+----------
+
+## Prerequisites
+
+Before adding a new app, make sure the following are in place:
+
+-   You have SSH access to `MIS-WS02` or are working inside the WSL2 instance directly
+-   Docker and Docker Compose are running (`docker ps` returns active containers)
+-   You have the Git repository URL for the new application
+-   A port has been decided for the new app (see [Port Assignments](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#port-assignments))
+-   The app's `.env` values (DB credentials, `APP_KEY`, etc.) are available
+
+----------
+
+## Infrastructure Overview
+
+```
+/var/www/
+│
+├── nginx/
+│   └── default.conf          # All nginx server blocks live here
+│
+├── php/
+│   ├── Dockerfile            # Shared PHP-FPM 8.2 image (used by all apps)
+│   ├── opcache.ini           # OPcache configuration
+│   └── entrypoint.sh        # Container entrypoint
+│
+├── docker-compose.yml        # All services defined here
+│
+├── scripts/
+│   └── setup-app-perms.sh    # Permission setup script
+│
+├── facility-checklist/       # App
+├── jorf/                     # App
+└── <new-app>/                # ← Your new app goes here
+
+```
+
+### How it works
+
+Each Laravel app gets:
+
+-   Its own **PHP-FPM service** in `docker-compose.yml` (built from the shared `/var/www/php/Dockerfile`)
+-   Its own **nginx server block** in `nginx/default.conf` that proxies `.php` requests to that PHP-FPM service
+-   Its own **port** exposed on the host
+
+nginx and all PHP-FPM containers share the same Docker network, so nginx can reach each service by its container name (e.g., `facility-checklist:9000`).
+
+----------
+
+## Step-by-Step Deployment
+
+### Step 1 — Clone the Repository
+
+Open a WSL2 terminal and navigate to `/var/www`, then clone the app:
+
+```bash
+cd /var/www
+git clone https://github.com/MIS-Projects-2025/<repo-name>.git <app-folder-name>
+
+```
+
+> **Convention:** Use a short, lowercase, hyphenated name for the folder (e.g., `ppc-portal`, `hr-system`). This name will also be used as the Docker service name and nginx upstream.
+
+----------
+
+### Step 2 — Set File Permissions
+
+Laravel requires that the `storage/` and `bootstrap/cache/` directories are writable by the PHP-FPM process (`www-data`, UID `33`). Your WSL user also needs ownership of the rest of the app for development.
+
+Run the permissions script from the WSL terminal:
+
+```bash
+bash /var/www/scripts/setup-app-perms.sh <app-folder-name>
+
+```
+
+> See [Scripts Reference](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#scripts-reference) for what this script does.
+
+If `bootstrap/cache` does not exist yet (fresh clone), create it first:
+
+```bash
+mkdir -p /var/www/<app-folder-name>/bootstrap/cache
+
+```
+
+Then re-run the permissions script.
+#### ⚠️ What about writable folders inside `public/`?
+
+Some developers place upload directories directly under `public/` (e.g., `public/uploads/`) and grant `www-data` write access to them. **This is not recommended.**
+
+`public/` is the webroot — everything in it is directly accessible via URL. Giving PHP-FPM write access to it means a vulnerability (e.g., an unrestricted file upload flaw) could allow an attacker to drop a PHP web shell inside a writable folder and execute it through the browser, bypassing every layer of Laravel's security.
+
+**The correct alternative is to use Laravel's storage system:**
+
+1.  Store uploads to `storage/app/public/<subfolder>/` — already writable by `www-data`
+2.  Run `php artisan storage:link` once during setup — creates a `public/storage` symlink pointing to `storage/app/public/`
+3.  Reference files via `Storage::url()` or `asset('storage/...')` in the app
+
+This keeps uploaded files outside the webroot while still being publicly accessible through the symlink.
+
+**If a developer absolutely must write to a folder under `public/`** (e.g., a legacy integration that cannot be changed), apply ownership to that specific subfolder only — never to all of `public/`:
+
+bash
+```bash
+# Only do this if there is no alternative
+sudo chown -R 33:33 /var/www/<app-folder-name>/public/<specific-subfolder>
+```
+Also ensure the folder blocks PHP execution via nginx by adding this to the app's server block in `default.conf`:
+
+nginx
+```nginx
+location ~* /public/<specific-subfolder>/.*\.php$ {
+    deny all;
+}
+```
+Without that rule, any `.php` file uploaded into that folder is executable via URL.
+
+----------
+
+### Step 3 — Configure the Environment File
+
+```bash
+cd /var/www/<app-folder-name>
+cp .env.example .env
+
+```
+
+Open `.env` in VS Code (via Remote SSH or `code .env`) and configure at minimum:
+
+```dotenv
+APP_NAME="Your App Name"
+APP_ENV=production
+APP_KEY=                        # Leave blank — generated in Step 7
+APP_DEBUG=false
+APP_URL=http://192.168.2.221:<port>
+
+DB_CONNECTION=mysql
+DB_HOST=host.docker.internal    # IMPORTANT: use this, not localhost or 127.0.0.1
+DB_PORT=3306
+DB_DATABASE=<database_name>
+DB_USERNAME=<db_user>
+DB_PASSWORD=<db_password>
+
+```
+
+> **`DB_HOST=host.docker.internal`** is required because the DB runs on the host (or another container), not inside the PHP-FPM container. The `extra_hosts` entry in `docker-compose.yml` maps this hostname to the host gateway automatically.
+
+----------
+
+### Step 4 — Update `docker-compose.yml`
+
+Open `/var/www/docker-compose.yml` and make **two additions**:
+
+#### 4a — Add a new PHP-FPM service
+
+Add this block under `services:`, following the same pattern as existing apps:
+
+```yaml
+  <app-folder-name>:
+    build:
+      context: /var/www/php
+    volumes:
+      - /var/www/<app-folder-name>:/var/www
+    environment:
+      - APP_ENV=production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+```
+
+#### 4b — Register the app in the `nginx` service
+
+Under the `nginx` service, add to **`ports`**:
+
+```yaml
+      - "<port>:<port>"
+
+```
+
+Add to **`volumes`**:
+
+```yaml
+      - /var/www/<app-folder-name>:/var/www/<app-folder-name>
+
+```
+
+Add to **`depends_on`**:
+
+```yaml
+      - <app-folder-name>
+
+```
+
+----------
+
+### Step 5 — Add an nginx Server Block
+
+Open `/var/www/nginx/default.conf` and append a new `server {}` block:
+
+```nginx
+server {
+    listen <port>;
+    root /var/www/<app-folder-name>/public;
+    index index.php index.html;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass <app-folder-name>:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME /var/www/public$fastcgi_script_name;
+        include fastcgi_params;
+    }
+}
+
+```
+
+> Replace `<port>` and `<app-folder-name>` with the actual values. The `fastcgi_pass` value must exactly match the service name in `docker-compose.yml` — that's how nginx resolves the PHP-FPM container by name.
+
+----------
+
+### Step 6 — Install Composer Dependencies
+
+Since PHP and Composer live **inside the Docker container** (not on the host), you run `composer install` through Docker Compose.
+
+First, bring up only the new service:
+
+```bash
+cd /var/www
+docker compose up -d <app-folder-name>
+
+```
+
+Then exec into it and run Composer:
+
+```bash
+docker compose exec <app-folder-name> composer install --no-dev --optimize-autoloader
+
+```
+
+----------
+
+### Step 7 — Bootstrap the Application
+
+Still exec'd inside the container (or using `docker compose exec`), run the standard Laravel setup commands:
+
+```bash
+# Generate the application key (fills APP_KEY in .env)
+docker compose exec <app-folder-name> php artisan key:generate
+
+# Run database migrations
+docker compose exec <app-folder-name> php artisan migrate --force
+
+# Create the public storage symlink (if the app uses file uploads)
+docker compose exec <app-folder-name> php artisan storage:link
+
+# Cache config and routes for production performance
+docker compose exec <app-folder-name> php artisan config:cache
+docker compose exec <app-folder-name> php artisan route:cache
+docker compose exec <app-folder-name> php artisan view:cache
+
+```
+
+> `--force` on migrate is required in production (`APP_ENV=production`) to bypass the confirmation prompt.
+
+----------
+
+### Step 8 — Restart Docker Services
+
+Bring up the full stack so nginx picks up the new config and all services are running:
+
+```bash
+cd /var/www
+docker compose down
+docker compose up -d --build
+
+```
+
+> `--build` is only strictly needed if the shared PHP image changed. If you only added a new service entry (which uses the same `build: context: /var/www/php`), Docker Compose will reuse the cached image. It's safe to include it regardless.
+
+Once up, verify the new app is reachable:
+
+```
+http://192.168.2.221:<port>
+
+```
+
+----------
+
+## Scripts Reference
+
+### `scripts/setup-app-perms.sh`
+
+```bash
+#!/bin/bash
+set -e
+
+APP_NAME=$1
+
+if [ -z "$APP_NAME" ]; then
+  echo "Usage: ./setup-app-perms.sh <app-folder-name>"
+  exit 1
+fi
+
+APP_PATH="/var/www/$APP_NAME"
+
+echo "Setting permissions for $APP_PATH..."
+
+sudo chown -R $USER:$USER "$APP_PATH"
+sudo chown -R 33:33 "$APP_PATH/storage"
+sudo chown -R 33:33 "$APP_PATH/bootstrap/cache"
+
+echo "Done."
+
+```
+
+**Usage:**
+
+```bash
+bash /var/www/scripts/setup-app-perms.sh ppc-portal
+
+```
+
+----------
+
+
+## Port Assignments
+
+Keep a running record here to avoid port collisions.
+
+|Port|App Name|
+|--------|:-------------:|
+|8190|facility-checklist|
+|8191|jorf|
+|8192|rhtemp|
+|8193|tptms|
+|8194|mts|
+|8195|mis-is|
+|8196|mis-pmcs|
+|8197|rims|
+|8198|(unassigned)|
+|8199|ppc|
+|8200|authify|
+|8300|store|
+
+> When assigning a new port, pick the next available number and add a row to this table.
+
+----------
+
+## Troubleshooting
+
+### 502 Bad Gateway
+
+nginx is running but can't reach the PHP-FPM container.
+
+-   Confirm the service name in `fastcgi_pass` exactly matches the service name in `docker-compose.yml`
+-   Check that the PHP-FPM container is running: `docker compose ps`
+-   Check its logs: `docker compose logs <app-folder-name>`
+
+### 500 Internal Server Error
+
+Usually a Laravel misconfiguration.
+
+-   Check `storage/logs/laravel.log` inside the container: `docker compose exec <app-folder-name> tail -n 50 storage/logs/laravel.log`
+-   Confirm `APP_KEY` is set in `.env`
+-   Confirm `storage/` and `bootstrap/cache/` are writable (rerun the permissions script)
+
+### Blank page or missing assets
+
+-   Make sure `php artisan storage:link` was run
+-   Make sure `public/` is the nginx `root`, not `/var/www` or the app root
+
+### DB connection refused inside container
+
+-   Confirm `DB_HOST=host.docker.internal` (not `localhost`)
+-   Confirm the `extra_hosts` entry is present in the service definition in `docker-compose.yml`
+-   Check that the database exists and the credentials are correct
+
+### Changes to `default.conf` not reflected
+
+nginx config is bind-mounted, so a config reload is enough (no full rebuild needed):
+
+```bash
+docker compose exec nginx nginx -s reload
+```
+### Stray newline after `<?php` causing silent failures
+
+**Symptom:** Redirects don't work, session cookies aren't set, middleware behaves unexpectedly — no error in the logs, no obvious cause.
+
+**Cause:** A file (commonly `routes/web.php`, `bootstrap/app.php`, or similar) has an invisible BOM (Byte Order Mark) or a stray newline before or after the opening `<?php` tag. This causes PHP to emit output before any headers are sent. Laravel's redirect and session machinery silently breaks as a result.
+
+This typically happens when a file is created or edited on Windows and saved with a BOM, or when an editor inserts a blank line above `<?php`.
+
+**Fix:**
+Check for the BOM or leading whitespace:
+
+bash
+```bash
+cat -A routes/web.php | head -3
+```
+If you see `^M` characters or a blank first line, the file is affected.
+
+Strip it using `sed`:
+bash
+```bash
+sed -i '1{/^\xEF\xBB\xBF/d}' routes/web.php   # remove BOM
+sed -i '/./,$!d' routes/web.php                 # remove leading blank lines
+```
+Or in VS Code: open the file, open the Command Palette (`Ctrl+Shift+P`), run **Change File Encoding**, and save as **UTF-8** (not UTF-8 with BOM).
+
+**Prevention:** In VS Code settings, set `"files.encoding": "utf8"` and `"files.insertFinalNewline": true`. Never use UTF-8 with BOM for PHP files.
+
+----------
+
+### Linux case sensitivity breaking imports
+
+**Symptom:** The app works locally on Windows or macOS but throws cryptic `Module not found` errors or blank pages after deployment to the Linux server.
+
+**Cause:** Windows and macOS filesystems are case-insensitive — `import Foo from './foo'` resolves even if the file is named `Foo.jsx`. Ubuntu's filesystem is case-sensitive, so the same import fails if the casing doesn't match exactly.
+
+This most commonly affects React component imports and Laravel class autoloading.
+
+**Fix for frontend (Vite):** Add a `caseInsensitiveResolver` plugin to `vite.config.js` that normalizes import paths at build time. This was implemented across MIS apps to handle this exact issue — refer to the existing apps for the plugin implementation (**ppc portal has this**).
+
+**Fix for PHP/Laravel:** Check that all `use` statements, class names, and filenames match in casing exactly. PHP autoloading on Linux will fail to find `App\Models\myModel` if the file is named `MyModel.php`.
+
+**Prevention:** Always name files and write imports with consistent, exact casing from the start. Treat the Linux server as the source of truth, not your local machine.

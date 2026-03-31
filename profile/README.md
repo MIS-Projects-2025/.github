@@ -359,7 +359,7 @@ bash /var/www/scripts/setup-app-perms.sh ppc-portal
 
 
 ## Port Assignments
-
+### If you forgot this step, I'll be sad...
 Keep a running record here to avoid port collisions.
 
 |Port|App Name|

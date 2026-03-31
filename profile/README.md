@@ -37,7 +37,7 @@ Before adding a new app, make sure the following are in place:
 -   You have SSH access to `MIS-WS02` (192.168.2.221) or are working inside the WSL2 instance directly. You can also remote into it. Ask the MIS team for the WSL2 Ubuntu credentials if you don't have them yet.
 -   Docker and Docker Compose are running (`docker ps` returns active containers)
 -   You have the Git repository URL for the new application
--   A port has been decided for the new app (see [Port Assignments](https://claude.ai/chat/417bfd43-c46d-449d-abd9-5e803929bc7c#port-assignments))
+-   A port has been decided for the new app (see [Port Assignments](#port-assignments))
 -   The app's `.env` values (DB credentials, `APP_KEY`, etc.) are available
 
 ----------

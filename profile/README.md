@@ -385,6 +385,110 @@ sudo chown -R 33:33 "$APP_PATH/bootstrap/cache"
 
 echo "Done."
 
+# Infrastructure Documentation
+
+This file contains the core configurations for the Nginx, Docker Compose, and Dockerfile setup.
+
+## Nginx Reference
+```nginx
+# Sets the max allowed size of the client request body for uploads
+client_max_body_size 100M;
+
+# Memory buffers to handle large PHP responses without hitting the disk
+fastcgi_buffers 16 16k;
+fastcgi_buffer_size 32k;
+fastcgi_busy_buffers_size 32k;
+
+# Time limit for Nginx to wait for a PHP response
+fastcgi_read_timeout 300;
+
+# Compression settings to reduce transfer size of text/assets
+gzip on;
+gzip_vary on;
+gzip_comp_level 5;
+gzip_min_length 1024;
+gzip_types text/plain text/css application/json application/javascript text/xml;
+
+server {
+    listen 80; # Internal port for the container
+    root /var/www/APP_NAME/public; # Mapping to the public-facing directory
+    index index.php index.html;
+
+    location / {
+        # Tries to find actual file/dir; if not, sends to index.php (Standard for SPA/Frameworks)
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        # Connects Nginx to the PHP-FPM service by its container name
+        fastcgi_pass PHP_SERVICE_NAME:9000;
+        fastcgi_index index.php;
+        # Maps the path where the PHP script resides inside the PHP container
+        fastcgi_param SCRIPT_FILENAME /var/www/public$fastcgi_script_name;
+        include fastcgi_params;
+    }
+}
+Docker Compose Reference
+YAML
+services:
+  nginx:
+    image: nginx:alpine # Minimal Linux footprint for efficiency
+    ports:
+      - "HOST_PORT:CONTAINER_PORT" # External:Internal port mapping
+    volumes:
+      - ./LOCAL_SRC:/var/www/TARGET_PATH # Syncs local files with container
+    depends_on:
+      - PHP_SERVICE_NAME # Ensures backend is up before web server
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Fix for container-to-host communication
+    restart: unless-stopped # Restarts container on failure or system reboot
+
+  PHP_SERVICE_NAME:
+    build:
+      context: ./php_docker_dir # Path to the folder with the Dockerfile
+    volumes:
+      - ./LOCAL_SRC:/var/www # Mounts source for the PHP processor
+    environment:
+      - APP_ENV=production # Injects environment-specific variables
+    restart: unless-stopped
+Dockerfile Reference
+Dockerfile
+# Uses the official PHP FPM (FastCGI) image
+FROM php:8.2-fpm
+
+# Install OS libraries required for PHP extensions to compile correctly
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    zip \
+    unzip
+
+# Installs and enables PHP extensions (Database, Image handling, and cache)
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip opcache
+
+# Grabs Composer from the official image (Multi-stage build)
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Copies project-specific PHP configurations
+COPY opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+
+# Entrypoint script for runtime initialization tasks
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Sets the base path for all container commands
+WORKDIR /var/www
+
+# Runs the initialization script every time the container starts
+ENTRYPOINT ["/entrypoint.sh"]
+
+# The command that starts the actual PHP process
+CMD ["php-fpm"]
+
 ```
 
 ## Dockerfile Reference

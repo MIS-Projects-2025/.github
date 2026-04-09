@@ -24,8 +24,9 @@ This guide covers the complete process of deploying a new Laravel application to
 6.  [Dockerfile Reference](#dockerfile-reference)
 7.  [Nginx Reference](#nginx-reference)
 8.  [Docker Compose Reference](#docker-compose-reference)
-9.  [Port Assignments](#port-assignments)
-10.  [Troubleshooting](#troubleshooting)
+9.  [Opcache Reference](#opcache-reference)
+10.  [Port Assignments](#port-assignments)
+11.  [Troubleshooting](#troubleshooting)
 	-   [502 Bad Gateway](#502-bad-gateway)
 	-   [500 Internal Server Error](#500-internal-server-error)
 	-   [Blank page or missing assets](#blank-page-or-missing-assets)
@@ -357,7 +358,6 @@ Once up, verify the new app is reachable:
 http://192.168.2.221:<port>
 
 ```
-
 ----------
 
 ## Scripts Reference
@@ -495,6 +495,14 @@ services:
       - APP_ENV=production # Injects environment-specific variables
     restart: unless-stopped
 ```
+## Opcache Reference
+```
+opcache.enable=1
+opcache.memory_consumption1=128
+opcache.max_accelerated_files=10000
+opcache.revalidate_freq=0
+```
+
 ## Port Assignments
 ### If you forgot this step, I'll be sad...
 Keep a running record here to avoid port collisions.

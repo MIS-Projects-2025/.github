@@ -2,13 +2,7 @@
 # Adding a New Laravel App to the MIS Infrastructure
 
 This guide covers the complete process of deploying a new Laravel application to the MIS server (`MIS-WS02` / `192.168.2.221`) running Docker + nginx + PHP-FPM on WSL2.
-#!/bin/sh
-find /var/www -path "*/storage*" -exec chown www-data:www-data {} + \
-  && find /var/www -path "*/storage*" -exec chmod 775 {} +
-find /var/www -path "*/bootstrap/cache*" -exec chown www-data:www-data {} + \
-  && find /var/www -path "*/bootstrap/cache*" -exec chmod 775 {} +
 
-exec "$@"
 ----------
 
 ## Table of Contents
@@ -513,6 +507,16 @@ opcache.enable=1
 opcache.memory_consumption1=128
 opcache.max_accelerated_files=10000
 opcache.revalidate_freq=0
+```
+## Entrypoint Reference
+```
+#!/bin/sh 
+find /var/www -path "_/storage_" -exec chown www-data:www-data {} + \
+	&& find /var/www -path "_/storage_" -exec chmod 775 {} +
+find /var/www -path "_/bootstrap/cache_" -exec chown www-data:www-data {} + \
+	&& find /var/www -path "_/bootstrap/cache_" -exec chmod 775 {} +
+	
+exec "$@"
 ```
 
 ## Port Assignments

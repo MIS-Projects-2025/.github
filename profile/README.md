@@ -3,6 +3,12 @@
 
 This guide covers the complete process of deploying a new Laravel application to the MIS server (`MIS-WS02` / `192.168.2.221`) running Docker + nginx + PHP-FPM on WSL2.
 
+quick reminder: if you encounter permission/role errors when executing any commands inside wsl terminal, prepend them with 'sudo'.
+```
+# example
+sudo docker ps
+```
+
 ----------
 
 ## Table of Contents

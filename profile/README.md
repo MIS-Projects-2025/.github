@@ -498,6 +498,7 @@ services:
       - "HOST_PORT:CONTAINER_PORT" # External:Internal port mapping
       - 8199:8199 # <- example. it's better for them to be the same
     volumes:
+      - /var/www/nginx/default.conf:/etc/nginx/conf.d/default.conf # don't forget this part!!!
       - ./LOCAL_SRC:/var/www/TARGET_PATH # Syncs local files with container
     depends_on:
       - PHP_SERVICE_NAME # Ensures backend is up before web server

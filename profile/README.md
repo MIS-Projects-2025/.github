@@ -8,7 +8,7 @@ This guide covers the complete process of deploying a new Laravel application to
 
 1.  [Prerequisites](#prerequisites)
 2.  [Infrastructure Overview](#infrastructure-overview)
-3.  [Ubuntu Ownership and Permission](#ownership-and-permission)
+3.  [Ubuntu Ownership and Permission](#ubuntu-ownership-and-permission)
 4.  [Step-by-Step Deployment](#step-by-step-deployment)
     -   [Step 1 — Clone the Repository](#step-1--clone-the-repository)
     -   [Step 2 — Set File Permissions](#step-2--set-file-permissions)
@@ -83,6 +83,7 @@ nginx and all PHP-FPM containers share the same Docker network, so nginx can rea
 Give yourself the ability to mutate files/folder inside /var/www/
 
 ```bash
+# Replace 'yourusername' with your actual WSL username
 sudo chown -R $(whoami):$(whoami) /var/www/scripts
 ```
 

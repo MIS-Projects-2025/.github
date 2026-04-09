@@ -20,8 +20,11 @@ This guide covers the complete process of deploying a new Laravel application to
     -   [Step 8 — Bootstrap the Application](#step-8--bootstrap-the-application)
     -   [Step 9 — Restart Docker Services](#step-9--restart-docker-services)
 5.  [Scripts Reference](#scripts-reference)
-6.  [Port Assignments](#port-assignments)
-7.  [Troubleshooting](#troubleshooting)
+6.  [Dockerfile Reference](#dockerfile-reference)
+7.  [Nginx Reference](#nginx-reference)
+8.  [Docker Compose Reference](#docker-compose-reference)
+9.  [Port Assignments](#port-assignments)
+10.  [Troubleshooting](#troubleshooting)
 	-   [502 Bad Gateway](#502-bad-gateway)
 	-   [500 Internal Server Error](#500-internal-server-error)
 	-   [Blank page or missing assets](#blank-page-or-missing-assets)
@@ -36,6 +39,8 @@ This guide covers the complete process of deploying a new Laravel application to
 Before adding a new app, make sure the following are in place:
 
 -   You have SSH access to `MIS-WS02` (192.168.2.221) or are working inside the WSL2 instance directly. You can also remote into it. Ask the MIS team for the WSL2 Ubuntu credentials if you don't have them yet.
+-   You installed WSL 2 (not WSL 1. this is important 😉😉😉)
+-   You have set up the following files: php/Dockerfile, nginx/default.conf, /docker-compose.yml, and scripts/setup-app-perms.sh (see [Table of Contents to see the files' reference](#table-of-contents)
 -   Docker and Docker Compose are running (`docker ps` returns active containers)
 -   You have the Git repository URL for the new application
 -   A port has been decided for the new app (see [Port Assignments](#port-assignments))
@@ -380,6 +385,22 @@ sudo chown -R 33:33 "$APP_PATH/bootstrap/cache"
 
 echo "Done."
 
+```
+
+## Dockerfile Reference
+
+```bash
+FROM 
+```
+
+## Nginx Reference
+```bash
+bash /var/www/scripts/setup-app-perms.sh ppc-portal
+```
+
+## Docker Compose Reference
+```bash
+bash /var/www/scripts/setup-app-perms.sh ppc-portal
 ```
 
 **Usage:**

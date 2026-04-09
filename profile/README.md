@@ -8,7 +8,8 @@ This guide covers the complete process of deploying a new Laravel application to
 
 1.  [Prerequisites](#prerequisites)
 2.  [Infrastructure Overview](#infrastructure-overview)
-3.  [Step-by-Step Deployment](#step-by-step-deployment)
+3.  [Ubuntu Ownership and Permission](#ownership-and-permission)
+4.  [Step-by-Step Deployment](#step-by-step-deployment)
     -   [Step 1 — Clone the Repository](#step-1--clone-the-repository)
     -   [Step 2 — Set File Permissions](#step-2--set-file-permissions)
     -   [Step 3 — Configure the Environment File](#step-3--configure-the-environment-file)
@@ -18,9 +19,9 @@ This guide covers the complete process of deploying a new Laravel application to
     -   [Step 7 — Build Frontend Assets](#step-7--build-frontend-assets)
     -   [Step 8 — Bootstrap the Application](#step-8--bootstrap-the-application)
     -   [Step 9 — Restart Docker Services](#step-9--restart-docker-services)
-4.  [Scripts Reference](#scripts-reference)
-5.  [Port Assignments](#port-assignments)
-6.  [Troubleshooting](#troubleshooting)
+5.  [Scripts Reference](#scripts-reference)
+6.  [Port Assignments](#port-assignments)
+7.  [Troubleshooting](#troubleshooting)
 	-   [502 Bad Gateway](#502-bad-gateway)
 	-   [500 Internal Server Error](#500-internal-server-error)
 	-   [Blank page or missing assets](#blank-page-or-missing-assets)
@@ -77,6 +78,17 @@ Each Laravel app gets:
 nginx and all PHP-FPM containers share the same Docker network, so nginx can reach each service by its container name (e.g., `facility-checklist:9000`).
 
 ----------
+
+## Ubuntu Ownership and Permission
+Give yourself the ability to mutate files/folder inside /var/www/
+
+```bash
+sudo chown -R $(whoami):$(whoami) /var/www/scripts
+```
+
+```bash
+sudo chmod -R 755 /var/www/scripts
+```
 
 ## Step-by-Step Deployment
 

@@ -34,7 +34,8 @@ sudo docker ps
 10.  [Opcache Reference](#opcache-reference)
 11. [Entrypoint Reference](#entrypoint-reference) 
 12. [Port Assignments](#port-assignments)
-13. [Troubleshooting](#troubleshooting)
+13. [WSL Node Installation](#wsl-node-installation)
+14. [Troubleshooting](#troubleshooting)
 	-   [502 Bad Gateway](#502-bad-gateway)
 	-   [500 Internal Server Error](#500-internal-server-error)
 	-   [Blank page or missing assets](#blank-page-or-missing-assets)
@@ -47,7 +48,7 @@ sudo docker ps
 ## Prerequisites
 
 Before adding a new app, make sure the following are in place:
-
+-   You already have Node js installed in Ubuntu. If not, refer to [WSL Node Installation](#wsl-node-installation)
 -   You have SSH access to `MIS-WS02` (192.168.2.221) or are working inside the WSL2 instance directly. You can also remote into it. Ask the MIS team for the WSL2 Ubuntu credentials if you don't have them yet.
 -   You installed WSL 2 (not WSL 1. this is important 😉😉😉)
 -   You have set up the following files (see [Infrastructure Overview](#infrastructure-overview), the files and folders must match that!!) (see [Table of Contents to see the files' reference](#table-of-contents)):
@@ -554,6 +555,25 @@ Keep a running record here to avoid port collisions.
 > When assigning a new port, pick the next available number and add a row to this table. If you forgot this step, I'll be sad...
 
 ----------
+
+## WSL Node Installation
+To avoid "UNC Path" errors and permission conflicts, you must use Linux-native build tools. Even if you have Node/NPM on Windows, they will not work correctly for projects stored inside the WSL file system.
+
+Run these commands once to provision your WSL environment:
+```
+# Install NVM (Node Version Manager)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# Reload bash configuration to activate nvm
+source ~/.bashrc
+
+# Install and use the latest LTS version of Node
+nvm install 20
+
+# VERIFY: The path must be in your home directory, NOT /mnt/c/
+which npm
+```
+> **Note:** If which `npm still` returns a path starting with `/mnt/c/Program Files/...`, your terminal is still prioritizing the Windows version. Run nvm use 20 to force the Linux version for your session.
 
 ## Troubleshooting
 

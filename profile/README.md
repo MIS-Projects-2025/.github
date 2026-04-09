@@ -9,8 +9,9 @@ This guide covers the complete process of deploying a new Laravel application to
 
 1.  [Prerequisites](#prerequisites)
 2.  [Infrastructure Overview](#infrastructure-overview)
-3.  [Ubuntu Ownership and Permission](#ubuntu-ownership-and-permission)
-4.  [Step-by-Step Deployment](#step-by-step-deployment)
+3.  [Docker Desktop Configuration](#docker-desktop-configuration)
+4.  [Ubuntu Ownership and Permission](#ubuntu-ownership-and-permission)
+5.  [Step-by-Step Deployment](#step-by-step-deployment)
     -   [Step 1 — Clone the Repository](#step-1--clone-the-repository)
     -   [Step 2 — Set File Permissions](#step-2--set-file-permissions)
     -   [Step 3 — Configure the Environment File](#step-3--configure-the-environment-file)
@@ -20,14 +21,14 @@ This guide covers the complete process of deploying a new Laravel application to
     -   [Step 7 — Build Frontend Assets](#step-7--build-frontend-assets)
     -   [Step 8 — Bootstrap the Application](#step-8--bootstrap-the-application)
     -   [Step 9 — Restart Docker Services](#step-9--restart-docker-services)
-5.  [Scripts Reference](#scripts-reference)
-6.  [Dockerfile Reference](#dockerfile-reference)
-7.  [Nginx Reference](#nginx-reference)
-8.  [Docker Compose Reference](#docker-compose-reference)
-9.  [Opcache Reference](#opcache-reference)
-10. [Entrypoint Reference](#entrypoint-reference) 
-11. [Port Assignments](#port-assignments)
-12. [Troubleshooting](#troubleshooting)
+6.  [Scripts Reference](#scripts-reference)
+7.  [Dockerfile Reference](#dockerfile-reference)
+8.  [Nginx Reference](#nginx-reference)
+9.  [Docker Compose Reference](#docker-compose-reference)
+10.  [Opcache Reference](#opcache-reference)
+11. [Entrypoint Reference](#entrypoint-reference) 
+12. [Port Assignments](#port-assignments)
+13. [Troubleshooting](#troubleshooting)
 	-   [502 Bad Gateway](#502-bad-gateway)
 	-   [500 Internal Server Error](#500-internal-server-error)
 	-   [Blank page or missing assets](#blank-page-or-missing-assets)
@@ -79,6 +80,11 @@ Before adding a new app, make sure the following are in place:
 └── <new-app>/                # ← Your new app goes here
 
 ```
+
+## Docker Desktop Configuration
+Open Windows' Docker Desktop > Settings > Resources > WSL Integration
+1. check the "enable integration with my default WSL distro
+2. Toggle "Ubuntu" on under "Enable integration with additional distros"
 
 ### How it works
 

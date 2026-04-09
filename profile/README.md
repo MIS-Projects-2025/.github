@@ -25,8 +25,9 @@ This guide covers the complete process of deploying a new Laravel application to
 7.  [Nginx Reference](#nginx-reference)
 8.  [Docker Compose Reference](#docker-compose-reference)
 9.  [Opcache Reference](#opcache-reference)
-10.  [Port Assignments](#port-assignments)
-11.  [Troubleshooting](#troubleshooting)
+10. [Entrypoint Reference](#entrypoint-reference) 
+11. [Port Assignments](#port-assignments)
+12. [Troubleshooting](#troubleshooting)
 	-   [502 Bad Gateway](#502-bad-gateway)
 	-   [500 Internal Server Error](#500-internal-server-error)
 	-   [Blank page or missing assets](#blank-page-or-missing-assets)
@@ -42,7 +43,12 @@ Before adding a new app, make sure the following are in place:
 
 -   You have SSH access to `MIS-WS02` (192.168.2.221) or are working inside the WSL2 instance directly. You can also remote into it. Ask the MIS team for the WSL2 Ubuntu credentials if you don't have them yet.
 -   You installed WSL 2 (not WSL 1. this is important 😉😉😉)
--   You have set up the following files: php/Dockerfile, nginx/default.conf, /docker-compose.yml, and scripts/setup-app-perms.sh (see [Table of Contents to see the files' reference](#table-of-contents)
+-   You have set up the following files (see [Infrastructure Overview](#infrastructure-overview), the files and folders must match that!!) (see [Table of Contents to see the files' reference](#table-of-contents)):
+	- php/Dockerfile
+	- php/entrypoint.sh
+	- nginx/default.conf
+	- docker-compose.yml
+	- scripts/setup-app-perms.sh
 -   Docker and Docker Compose are running (`docker ps` returns active containers)
 -   You have the Git repository URL for the new application
 -   A port has been decided for the new app (see [Port Assignments](#port-assignments))

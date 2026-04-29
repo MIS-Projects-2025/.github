@@ -109,7 +109,6 @@ nginx and all PHP-FPM containers share the same Docker network, so nginx can rea
 Give yourself the ability to mutate files/folder inside /var/www/. So that you can tinker inside it using Windows File Explorer.
 
 ```bash
-# Replace 'yourusername' with your actual WSL username
 sudo chown -R $(whoami):$(whoami) /var/www/scripts
 ```
 ```bash

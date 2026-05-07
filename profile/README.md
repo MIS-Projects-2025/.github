@@ -363,9 +363,8 @@ Bring up the full stack so nginx picks up the new config and all services are ru
 
 ```bash
 cd /var/www
-docker compose down
-docker compose up -d --build
-
+docker compose up -d --build --no-deps <new-app>
+docker compose up -d --no-deps nginx
 ```
 
 > `--build` is only strictly needed if the shared PHP image changed. If you only added a new service entry (which uses the same `build: context: /var/www/php`), Docker Compose will reuse the cached image. It's safe to include it regardless.

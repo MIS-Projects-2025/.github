@@ -171,7 +171,7 @@ This keeps uploaded files outside the webroot while still being publicly accessi
 bash
 ```bash
 # Only do this if there is no alternative
-sudo chown -R 33:33 /var/www/<app-folder-name>/public/<specific-subfolder>
+sudo chmod -R 775 /var/www/<app-folder-name>/public/<specific-subfolder>
 ```
 Also ensure the folder blocks PHP execution via nginx by adding this to the app's server block in `default.conf`:
 

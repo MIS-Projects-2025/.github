@@ -397,8 +397,8 @@ APP_PATH="/var/www/$APP_NAME"
 echo "Setting permissions for $APP_PATH..."
 
 sudo chown -R $USER:$USER "$APP_PATH"
-sudo chown -R 33:33 "$APP_PATH/storage"
-sudo chown -R 33:33 "$APP_PATH/bootstrap/cache"
+sudo chmod -R 775 "$APP_PATH/storage"
+sudo chmod -R 775 "$APP_PATH/bootstrap/cache"
 
 echo "Done."
 ```

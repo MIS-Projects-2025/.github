@@ -36,6 +36,12 @@ New-NetFirewallRule -DisplayName "Docker Swarm 4789" -Direction Inbound -Protoco
 
 these ports will be used later on
 
+DHCP keeps reassigning them. Kill dhcpcd to stop it:
+bashsudo pkill dhcpcd
+sudo ip addr flush dev eth0
+sudo ip addr add 192.168.1.115/22 dev eth0
+sudo ip route add default via 192.168.1.1 dev eth0
+
 setting permissions permanently granted on parents directory in Ubuntu
 sudo chown -R $(whoami):www-data /var/www
 sudo chmod -R 775 /var/www

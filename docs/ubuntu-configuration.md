@@ -28,7 +28,13 @@ disable socket thingy. dunno why
 ```powershell
     New-NetFirewallHyperVRule -DisplayName "Allow WSL SSH Port 2222" -Direction Inbound -LocalPorts 2222 -Action Allow
 ```
+something is blocking ports. you must allow them for servers' docker to communicate to each other.
+New-NetFirewallRule -DisplayName "Docker Swarm 2377" -Direction Inbound -Protocol TCP -LocalPort 2377 -Action Allow
+New-NetFirewallRule -DisplayName "Docker Swarm 7946 TCP" -Direction Inbound -Protocol TCP -LocalPort 7946 -Action Allow
+New-NetFirewallRule -DisplayName "Docker Swarm 7946 UDP" -Direction Inbound -Protocol UDP -LocalPort 7946 -Action Allow
+New-NetFirewallRule -DisplayName "Docker Swarm 4789" -Direction Inbound -Protocol UDP -LocalPort 4789 -Action Allow
 
+these ports will be used later on
 
 setting permissions permanently granted on parents directory in Ubuntu
 sudo chown -R $(whoami):www-data /var/www

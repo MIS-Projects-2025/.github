@@ -2,7 +2,7 @@
 
 > **Context:** Setting up WSL2 Ubuntu instances on Windows 11 machines for LAN-accessible server deployment — covering networking, SSH, Docker, and filesystem permissions.
 
-# to be edit here in documentation
+# TODO to edit/restructure this documentation later:
 place this step somewhere:
 Docker expects HTTPS by default. Since your registry is HTTP, you need to mark it as insecure on 1.16:
 sudo nano /etc/docker/daemon.json
@@ -11,6 +11,18 @@ add/paste this:
   "insecure-registries": ["192.168.1.16:5000"]
 }
 then sudo service docker restart
+
+In Windows PowerShell (admin): Add Windows Firewall rules for Swarm ports. Set up port proxies with netsh
+New-NetFirewallRule -DisplayName "Docker Swarm 2377" -Direction Inbound -Protocol TCP -LocalPort 2377 -Action Allow
+New-NetFirewallRule -DisplayName "Docker Swarm 7946 TCP" -Direction Inbound -Protocol TCP -LocalPort 7946 -Action Allow
+New-NetFirewallRule -DisplayName "Docker Swarm 7946 UDP" -Direction Inbound -Protocol UDP -LocalPort 7946 -Action Allow
+New-NetFirewallRule -DisplayName "Docker Swarm 4789" -Direction Inbound -Protocol UDP -LocalPort 4789 -Action Allow
+New-NetFirewallRule -DisplayName "Docker Registry" -Direction Inbound -Protocol TCP -LocalPort 5000 -Action Allow
+
+$wsl2ip = (wsl hostname -I).Trim().Split()[0]
+netsh interface portproxy add v4tov4 listenport=2377 listenaddress=0.0.0.0 connectport=2377 connectaddress=$wsl2ip
+netsh interface portproxy add v4tov4 listenport=7946 listenaddress=0.0.0.0 connectport=7946 connectaddress=$wsl2ip
+netsh interface portproxy add v4tov4 listenport=5000 listenaddress=0.0.0.0 connectport=5000 connectaddress=$wsl2ip
 ---
 
 ## Table of Contents

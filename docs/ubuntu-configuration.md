@@ -2,6 +2,15 @@
 
 > **Context:** Setting up WSL2 Ubuntu instances on Windows 11 machines for LAN-accessible server deployment — covering networking, SSH, Docker, and filesystem permissions.
 
+# to be edit here in documentation
+place this step somewhere:
+Docker expects HTTPS by default. Since your registry is HTTP, you need to mark it as insecure on 1.16:
+sudo nano /etc/docker/daemon.json
+add/paste this:
+{
+  "insecure-registries": ["192.168.1.16:5000"]
+}
+then sudo service docker restart
 ---
 
 ## Table of Contents

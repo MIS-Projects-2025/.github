@@ -17,6 +17,19 @@ ip route add subnets to grant all machines access to the apps in a server
 systemd = true
 command = service ssh start ; ip route add 10.0.0.0/8 via $(ip route | grep default | awk '{print $3}') ; ip route add 172.16.0.0/12 via $(ip route | grep default | awk '{print $3}') ; ip route add 192.168.0.0/16 via $(ip route | grep default | awk '{print $3}')
 
+[boot]
+command = service ssh start ; ip route add 192.168.0.0/24 via 192.168.1.1 ; ip route add 10.0.0.0/8 via 192.168.1.1 ; ip route add 172.16.0.0/12 via 192.168.1.1
+
+NEW NEW NEW
+[boot]
+systemd = true
+command = service ssh start ; GW=$(ip route | grep default | awk '{print $3}') ; ip route add 192.168.0.0/24 via $GW ; ip route add 192.168.0.0/16 via $GW ; ip route add 10.0.0.0/8 via $GW ; ip route add 172.16.0.0/12 via $GW
+
+NEW NA TALAGA
+[boot]
+systemd = true
+command = service ssh start ; GW=$(ip route | grep default | awk '{print $3}') ; ip route add 192.168.0.0/24 via $GW ; ip route add 192.168.1.0/24 via $GW ; ip route add 192.168.2.0/24 via $GW ; ip route add 192.168.3.0/24 via $GW ; ip route add 10.0.0.0/8 via $GW ; ip route add 172.16.0.0/12 via $GW
+
 verify (should look something like this):
 telfordprogrammer@TSPI-SERVER-04:/var/www/ppc$ ip route
 default via 192.168.1.1 dev enP38159p0s0 proto kernel 

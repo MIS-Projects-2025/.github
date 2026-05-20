@@ -12,17 +12,28 @@ add/paste this:
 }
 then sudo service docker restart
 
-In Windows PowerShell (admin): Add Windows Firewall rules for Swarm ports. Set up port proxies with netsh
-New-NetFirewallRule -DisplayName "Docker Swarm 2377" -Direction Inbound -Protocol TCP -LocalPort 2377 -Action Allow
-New-NetFirewallRule -DisplayName "Docker Swarm 7946 TCP" -Direction Inbound -Protocol TCP -LocalPort 7946 -Action Allow
-New-NetFirewallRule -DisplayName "Docker Swarm 7946 UDP" -Direction Inbound -Protocol UDP -LocalPort 7946 -Action Allow
-New-NetFirewallRule -DisplayName "Docker Swarm 4789" -Direction Inbound -Protocol UDP -LocalPort 4789 -Action Allow
-New-NetFirewallRule -DisplayName "Docker Registry" -Direction Inbound -Protocol TCP -LocalPort 5000 -Action Allow
+ip route add subnets to grant all machines access to the apps in a server
+[boot]
+systemd = true
+command = service ssh start ; ip route add 10.0.0.0/8 via $(ip route | grep default | awk '{print $3}') ; ip route add 172.16.0.0/12 via $(ip route | grep default | awk '{print $3}') ; ip route add 192.168.0.0/16 via $(ip route | grep default | awk '{print $3}')
 
-$wsl2ip = (wsl hostname -I).Trim().Split()[0]
-netsh interface portproxy add v4tov4 listenport=2377 listenaddress=0.0.0.0 connectport=2377 connectaddress=$wsl2ip
-netsh interface portproxy add v4tov4 listenport=7946 listenaddress=0.0.0.0 connectport=7946 connectaddress=$wsl2ip
-netsh interface portproxy add v4tov4 listenport=5000 listenaddress=0.0.0.0 connectport=5000 connectaddress=$wsl2ip
+verify (should look something like this):
+telfordprogrammer@TSPI-SERVER-04:/var/www/ppc$ ip route
+default via 192.168.1.1 dev enP38159p0s0 proto kernel 
+10.0.0.0/8 via 192.168.1.1 dev enP38159p0s0 
+169.254.73.152/30 dev loopback0 proto kernel scope link src 169.254.73.153 
+172.16.0.0/12 via 192.168.1.1 dev enP38159p0s0 
+172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1 
+172.18.0.0/16 dev br-7b1241acf266 proto kernel scope link src 172.18.0.1 
+192.168.0.0/22 dev enP38159p0s0 proto kernel scope link src 192.168.1.16 
+192.168.0.0/16 via 192.168.1.1 dev enP38159p0s0 
+
+virtioproxy is now the required networking mode for internet access (very important)
+[wsl2]
+networkingMode=virtioproxy
+dnsTunneling=true
+firewall=false
+
 ---
 
 ## Table of Contents
@@ -46,22 +57,10 @@ Edit `.wslconfig` on the **Windows host** (located at `C:\Users\<YourUser>\.wslc
 
 ```ini
 [wsl2]
-networkingMode=bridged
-vmSwitch=WSL-Bridge
+networkingMode virtioproxy
 dnsTunneling=false
 firewall=false
 ```
-
-**Why each setting:**
-
-| Setting | Reason |
-|---|---|
-| `networkingMode=bridged` | Puts the WSL2 VM directly on your LAN instead of behind Windows NAT. This is required so other machines on `192.168.1.x` can reach the WSL instance by its own IP. |
-| `vmSwitch=WSL-Bridge` | Specifies the Hyper-V virtual switch to use. You must create this switch in Hyper-V Manager first, connected to your physical NIC. |
-| `dnsTunneling=false` | Disables WSL's DNS tunneling proxy. Needed when you're on a bridged network with your own DNS setup. |
-| `firewall=false` | Disables the WSL-managed Hyper-V firewall layer. You'll be managing firewall rules manually. |
-
-> **Restart WSL after any `.wslconfig` change:** `wsl --shutdown` in PowerShell, then reopen Ubuntu.
 
 ---
 
@@ -171,34 +170,6 @@ New-NetFirewallHyperVRule `
 
 ---
 
-## 5. Docker Swarm Ports (Reserved for Later)
-
-These ports are needed for Docker Swarm inter-node communication across servers. Open them now so they're ready when Swarm is initialized.
-
-Run in **PowerShell as Administrator**:
-
-```powershell
-# Swarm management port (manager nodes)
-New-NetFirewallRule -DisplayName "Docker Swarm 2377" -Direction Inbound -Protocol TCP -LocalPort 2377 -Action Allow
-
-# Node discovery and gossip
-New-NetFirewallRule -DisplayName "Docker Swarm 7946 TCP" -Direction Inbound -Protocol TCP -LocalPort 7946 -Action Allow
-New-NetFirewallRule -DisplayName "Docker Swarm 7946 UDP" -Direction Inbound -Protocol UDP -LocalPort 7946 -Action Allow
-
-# VXLAN overlay network (container-to-container across hosts)
-New-NetFirewallRule -DisplayName "Docker Swarm 4789" -Direction Inbound -Protocol UDP -LocalPort 4789 -Action Allow
-```
-
-| Port | Protocol | Purpose |
-|---|---|---|
-| 2377 | TCP | Swarm manager API — used by `docker swarm join` and orchestration |
-| 7946 | TCP/UDP | Node gossip — health checks and cluster state sync between nodes |
-| 4789 | UDP | VXLAN — the overlay network tunneling traffic between containers on different hosts |
-
-> Also add corresponding Hyper-V firewall rules for these ports using `New-NetFirewallHyperVRule` if cross-host container networking doesn't work after joining the Swarm.
-
----
-
 ## 6. Static IP Assignment (Suppress DHCP)
 
 DHCP reassigning your WSL IP breaks VS Code Remote SSH connections and any LAN service that depends on a stable IP.
@@ -208,29 +179,6 @@ DHCP reassigning your WSL IP breaks VS Code Remote SSH connections and any LAN s
 ```bash
 sudo pkill dhcpcd
 ```
-
-### Assign a static IP manually
-
-```bash
-sudo ip addr flush dev eth0
-sudo ip addr add 192.168.1.115/22 dev eth0
-sudo ip route add default via 192.168.1.1 dev eth0
-```
-
-**Why each command:**
-
-| Command | Reason |
-|---|---|
-| `ip addr flush dev eth0` | Removes all current IP assignments from the interface before adding a new one. Prevents IP conflicts. |
-| `ip addr add 192.168.1.115/22 dev eth0` | Assigns the static IP. `/22` covers the `192.168.0.x`–`192.168.3.x` range — verify this matches your actual subnet mask. If your network uses `/24` (255.255.255.0), use `/24` here instead. |
-| `ip route add default via 192.168.1.1 dev eth0` | Sets the default gateway so traffic destined outside the LAN has a path out. |
-
-> **These settings don't survive WSL restarts.** To make them persistent, add the commands to `/etc/wsl.conf` under a `[boot]` command, or write a startup script. Example `/etc/wsl.conf` addition:
->
-> ```ini
-> [boot]
-> command = "pkill dhcpcd; ip addr flush dev eth0; ip addr add 192.168.1.115/22 dev eth0; ip route add default via 192.168.1.1 dev eth0"
-> ```
 
 ---
 

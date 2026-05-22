@@ -4,11 +4,13 @@
 
 # TODO to edit/restructure this documentation later:
 place this step somewhere:
-Docker expects HTTPS by default. Since your registry is HTTP, you need to mark it as insecure on 1.16:
+
+this is to ensure docker uses IPv4
+(hehe) 1.14 had no daemon.json at all, so Docker used its own defaults which on that machine happened to prefer IPv6 ([::]) instead of IPv4 (0.0.0.0).
 sudo nano /etc/docker/daemon.json
 add/paste this:
 {
-  "insecure-registries": ["192.168.1.16:5000"]
+  "ip": "0.0.0.0"
 }
 then sudo service docker restart
 

@@ -3,7 +3,17 @@
 > **Context:** Setting up WSL2 Ubuntu instances on Windows 11 machines for LAN-accessible server deployment — covering networking, SSH, Docker, and filesystem permissions.
 
 # TODO to edit/restructure this documentation later:
+
+
 place this step somewhere:
+
+The chmod g+s (setgid) you set ensures new files inherit the www-data group, but not the permissions — Linux still applies the user's umask when creating files, which typically masks out group write (umask 002 or 022).
+Fix it by setting the umask for your session permanently:
+bashecho "umask 002" >> ~/.bashrc
+source ~/.bashrc
+This ensures newly created files get 664 (rw-rw-r--) and directories 775 — group write included.
+For root too (since you run scripts with sudo):
+bashecho "umask 002" >> /root/.bashrc
 
 this is to ensure docker uses IPv4
 (hehe) 1.14 had no daemon.json at all, so Docker used its own defaults which on that machine happened to prefer IPv6 ([::]) instead of IPv4 (0.0.0.0).

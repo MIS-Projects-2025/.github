@@ -4,6 +4,7 @@
 This guide covers the complete process of deploying a new Laravel application to the MIS server (`MIS-WS02` / `192.168.2.221`) running Docker + nginx + PHP-FPM on WSL2.
 
 [Ubuntu Configuration](https://github.com/MIS-Projects-2025/.github/blob/main/docs/ubuntu-configuration.md)
+↑ Go through this link if you want to setup your Ubuntu's SSH and wsl configuration:
 
 quick reminder: if you encounter permission/role errors when executing any commands inside wsl terminal, prepend them with 'sudo'.
 ```

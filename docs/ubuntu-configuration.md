@@ -14,11 +14,9 @@
 6. [Windows Firewall Rules](#6-windows-firewall-rules)
    - [6.1 Windows Firewall (Layer 1)](#61-windows-firewall-layer-1)
    - [6.2 Hyper-V Firewall (Layer 2)](#62-hyper-v-firewall-layer-2)
-7. [Docker Swarm Ports](#7-docker-swarm-ports)
-8. [Static IP Assignment (Suppress DHCP)](#8-static-ip-assignment-suppress-dhcp)
-9. [Filesystem Permissions (`/var/www`)](#9-filesystem-permissions-varwww)
-10. [Docker Group Access and IPv4 Configuration](#10-docker-group-access-and-ipv4-configuration)
-11. [Auto-Pull Crontab for Workers](#11-auto-pull-crontab-for-workers)
+7. [Static IP Assignment (Suppress DHCP)](#7-static-ip-assignment-suppress-dhcp)
+8. [Filesystem Permissions (`/var/www`)](#8-filesystem-permissions-varwww)
+9. [Docker Group Access and IPv4 Configuration](#9-docker-group-access-and-ipv4-configuration)
 
 ---
 
@@ -207,19 +205,7 @@ New-NetFirewallHyperVRule `
 
 ---
 
-## 7. Docker Swarm Ports
-
-Open these ports on both the Windows Firewall and Hyper-V Firewall layers (same method as Section 6) for each Swarm node:
-
-| Port | Protocol | Purpose |
-|------|----------|---------|
-| 2377 | TCP | Swarm cluster management |
-| 7946 | TCP + UDP | Node-to-node communication |
-| 4789 | UDP | Overlay network (VXLAN) |
-
----
-
-## 8. Static IP Assignment (Suppress DHCP)
+## 7. Static IP Assignment (Suppress DHCP)
 
 DHCP reassigning your WSL IP breaks VS Code Remote SSH connections and any LAN service that depends on a stable IP.
 
@@ -233,7 +219,7 @@ Assign the static IP and gateway manually after killing DHCP, or configure it in
 
 ---
 
-## 9. Filesystem Permissions (`/var/www`)
+## 8. Filesystem Permissions (`/var/www`)
 
 Grants your user and the `www-data` group (used by nginx/PHP-FPM) shared write access to the web root.
 
@@ -276,7 +262,7 @@ echo "umask 002" >> /root/.bashrc
 
 ---
 
-## 10. Docker Group Access and IPv4 Configuration
+## 9. Docker Group Access and IPv4 Configuration
 
 ### Docker group (run Docker without `sudo`)
 
@@ -319,29 +305,6 @@ sudo service docker restart
 
 ---
 
-## 11. Auto-Pull Crontab for Workers
-
-On worker nodes (e.g. servers `.14`, `.15`), set up a crontab to auto-pull updated images from the private registry every 5 minutes:
-
-```bash
-crontab -e
-```
-
-Add:
-
-```cron
-*/5 * * * * cd /var/www && docker compose pull ppc --quiet && docker compose up -d --no-deps ppc && docker cp www-ppc-1:/var/www/public /var/www/ppc/ > /dev/null 2>&1
-```
-
-**What this does:**
-
-- Pulls the latest `ppc` image from the registry quietly.
-- Restarts only the `ppc` container without touching other services (`--no-deps`).
-- Copies the updated `/public` folder out of the container into the host path.
-- Suppresses all output to avoid noisy cron mail.
-
----
-
 ## Quick Reference Checklist
 
 - [ ] `.wslconfig` set to `virtioproxy` with `dnsTunneling=true`, `firewall=false`
@@ -352,7 +315,6 @@ Add:
 - [ ] VS Code Remote SSH config added for the host
 - [ ] Windows Firewall rule for port 2222
 - [ ] Hyper-V Firewall rule for port 2222
-- [ ] Docker Swarm ports opened (2377 TCP, 7946 TCP/UDP, 4789 UDP) on both firewall layers
 - [ ] Static IP assigned; DHCP client killed
 - [ ] `/etc/wsl.conf` boot command set (SSH start + subnet routes)
 - [ ] Routes verified with `ip route`
@@ -360,4 +322,3 @@ Add:
 - [ ] `umask 002` added to `~/.bashrc` and `/root/.bashrc`
 - [ ] User added to `www-data` and `docker` groups
 - [ ] `/etc/docker/daemon.json` set to `"ip": "0.0.0.0"`
-- [ ] Auto-pull crontab configured on worker nodes

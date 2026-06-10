@@ -106,8 +106,9 @@ firewall=false
 
 WSL2 loses `ip route` additions on restart. Use the `[boot]` command in `/etc/wsl.conf` to restore routes and start SSH automatically on every WSL2 launch.
 
+```bash
 sudo nano /usr/local/bin/wsl-startup.sh
-
+```
 add inside:
 ```ini
 #!/bin/bash

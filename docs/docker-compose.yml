@@ -1,0 +1,51 @@
+# =============================================================================
+# IF YOU ADD NEW APPS, UPDATE ALSO THE NGINX CONFIG (nginx/default.conf)
+# AND THE DEPLOY SCRIPT (deploy.sh) TO RELOAD NGINX AFTER DEPLOYING NEW IMAGES.
+# IT SHUOLD BE CONSISTENT ESPECIALLY THE PORTS
+# EXAMPLE TEMPLATE
+# =============================================================================
+
+services:
+  nginx:
+    image: nginx:alpine
+    user: "1000:33"
+    container_name: www-nginx-1
+    ports:
+      - "7100:7100"
+     # ^ add yours <--------------------------------------------------
+    volumes:
+      - /var/www/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - /var/www/lot-summary-directory:/var/www/lot-summary-directory
+    depends_on:
+      lot-summary-directory:
+        condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+
+  lot-summary-directory:
+    image: ghcr.io/mis-projects-2025/lot-summary-directory:latest
+    user: "1000:33"
+    volumes:
+      - /var/www/lot-summary-directory/.env:/var/www/.env
+      - /var/www/lot-summary-directory/storage:/var/www/storage
+      - /mnt/dtr-g6l:/mnt/dtr-g6l:ro
+    environment:
+      - APP_ENV=production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+
+  lot-summary-directory-scheduler:
+    image: ghcr.io/mis-projects-2025/lot-summary-directory:latest
+    user: "1000:33"
+    command: ["php", "/var/www/artisan", "schedule:work"]
+    volumes:
+      - /var/www/lot-summary-directory/.env:/var/www/.env
+      - /var/www/lot-summary-directory/storage:/var/www/storage
+      - /mnt/dtr-g6l:/mnt/dtr-g6l:ro
+    environment:
+      - APP_ENV=production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always

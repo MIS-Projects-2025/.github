@@ -106,6 +106,29 @@ firewall=false
 
 WSL2 loses `ip route` additions on restart. Use the `[boot]` command in `/etc/wsl.conf` to restore routes and start SSH automatically on every WSL2 launch.
 
+sudo nano /usr/local/bin/wsl-startup.sh
+
+add inside:
+```ini
+#!/bin/bash
+
+# Fix permissions on /var/www
+chown -R $(whoami):www-data /var/www
+chmod -R 775 /var/www
+
+# SSH
+service ssh start 2>/dev/null || true
+
+# Routing
+GW=$(ip route | grep default | awk '{print $3}')
+ip route add 192.168.0.0/24 via $GW 2>/dev/null || true
+ip route add 192.168.1.0/24 via $GW 2>/dev/null || true
+ip route add 192.168.2.0/24 via $GW 2>/dev/null || true
+ip route add 192.168.3.0/24 via $GW 2>/dev/null || true
+ip route add 10.0.0.0/8 via $GW 2>/dev/null || true
+ip route add 172.16.0.0/12 via $GW 2>/dev/null || true
+```
+
 Edit `/etc/wsl.conf` inside the WSL2 instance:
 
 ```bash
@@ -113,11 +136,10 @@ sudo nano /etc/wsl.conf
 ```
 
 Add:
-
 ```ini
 [boot]
-systemd = true
-command = service ssh start ; GW=$(ip route | grep default | awk '{print $3}') ; ip route add 192.168.0.0/24 via $GW ; ip route add 192.168.1.0/24 via $GW ; ip route add 192.168.2.0/24 via $GW ; ip route add 192.168.3.0/24 via $GW ; ip route add 10.0.0.0/8 via $GW ; ip route add 172.16.0.0/12 via $GW
+systemd=true
+command = /usr/local/bin/wsl-startup.sh
 ```
 
 **What this does:**
@@ -254,12 +276,6 @@ source ~/.bashrc
 
 This ensures newly created files get `664` (`rw-rw-r--`) and directories `775` — group write included.
 
-Also apply to root, since scripts may run with `sudo`:
-
-```bash
-echo "umask 002" >> /root/.bashrc
-```
-
 ---
 
 ## 9. Docker Group Access and IPv4 Configuration
@@ -268,7 +284,6 @@ echo "umask 002" >> /root/.bashrc
 
 ```bash
 sudo usermod -aG docker $USER
-newgrp docker
 ```
 
 **Why:**

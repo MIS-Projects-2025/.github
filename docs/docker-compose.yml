@@ -2,6 +2,9 @@
 # IF YOU ADD NEW APPS, UPDATE ALSO THE NGINX CONFIG (nginx/default.conf)
 # AND THE DEPLOY SCRIPT (deploy.sh) TO RELOAD NGINX AFTER DEPLOYING NEW IMAGES.
 # IT SHUOLD BE CONSISTENT ESPECIALLY THE PORTS
+# Before adding user: to any new service in this compose file, 
+# ask: "Does this container write to a path I've bind-mounted from /var/www/...?" 
+# If no, don't add user: at all — save yourself the future debugging session.
 # EXAMPLE TEMPLATE
 # =============================================================================
 

@@ -8,7 +8,6 @@
 services:
   nginx:
     image: nginx:alpine
-    user: "1000:33"
     container_name: www-nginx-1
     ports:
       - "7100:7100"

@@ -69,12 +69,14 @@ copy_public_assets() {
     local dest="/var/www/${service}/public"
 
     mkdir -p "$dest"
-    if docker cp "${container}:/var/www/public/build" "$dest/" 2>/dev/null; then
+    if docker cp "${container}:/var/www/public/." "$dest/" 2>/dev/null; then
+        chown -R 1000:33 "$dest"
+        chmod -R 775 "$dest"
         log_ok       "  Assets synced    → ${service}"
         log_service "$service" "Assets synced."
     else
-        log_warn     "  Assets sync failed (no /public/build?)  → ${service}"
-        log_service "$service" "WARNING: Asset copy failed or no build folder."
+        log_warn     "  Assets sync failed (no /public?)  → ${service}"
+        log_service "$service" "WARNING: Asset copy failed or no public folder."
     fi
 }
 

@@ -27,7 +27,6 @@ services:
 
   lot-summary-directory:
     image: ghcr.io/mis-projects-2025/lot-summary-directory:latest
-    user: "1000:33"
     volumes:
       - /var/www/lot-summary-directory/.env:/var/www/.env
       - /var/www/lot-summary-directory/storage:/var/www/storage
@@ -40,7 +39,6 @@ services:
 
   lot-summary-directory-scheduler:
     image: ghcr.io/mis-projects-2025/lot-summary-directory:latest
-    user: "1000:33"
     command: ["php", "/var/www/artisan", "schedule:work"]
     volumes:
       - /var/www/lot-summary-directory/.env:/var/www/.env

@@ -318,6 +318,71 @@ default via 192.168.20.1 dev enP15810p0s0 proto kernel
 
 ---
 
+## 4c. `portproxy` internal state corruption (silent — rules "exist" but don't work)
+
+**Symptom:** every WSL2/Docker port stops responding externally — including ports
+that were working reliably for weeks — while `netsh interface portproxy show all`
+shows all the expected rules present and correctly configured, `Get-Service
+iphlpsvc` shows the service `Running`, Windows Firewall rules are all `Enabled`,
+and the app itself is confirmed healthy via `curl -v http://localhost:<port>/` on
+the server. `netstat -ano | findstr :<port>` shows **nothing at all** for any
+`portproxy`-forwarded port — not even a `LISTENING` line — despite the rule
+supposedly being active.
+
+**What does NOT fix it** (all tried, in this order, none worked):
+- `wsl --shutdown` + restart
+- `Restart-Service hns -Force`
+- `Restart-Service vmcompute -Force`
+- A full Windows restart of the host machine
+- Switching `.wslconfig` networking mode (mirrored ↔ virtioproxy)
+- Deleting and re-adding the specific `portproxy` rule for one port
+
+**Root cause:** `netsh interface portproxy`'s rules are backed by IP Helper
+(`iphlpsvc`)'s own internal forwarding table/driver state, which is **separate**
+from the plain-text rule list `show all` displays. That internal table can get
+into a corrupted/stuck state — most likely triggered here by many rapid
+add/delete/re-add cycles on the same ports combined with repeated WSL2
+networking-mode switches in one session — where the rule list still displays
+correctly but the actual packet-forwarding no longer happens. None of the above
+"soft" recovery attempts touch this specific internal table, which is why they
+all failed to fix it, including the full reboot.
+
+**The actual fix — reset the portproxy driver table directly:**
+```powershell
+Stop-Service iphlpsvc -Force
+netsh interface portproxy reset
+Start-Service iphlpsvc
+```
+This is fast (a few seconds) and far more targeted than a reboot — it clears only
+IP Helper's forwarding state, without touching WSL2, Docker, network adapters, or
+anything else. **A full Windows restart is NOT necessary and did not fix this in
+practice** — go straight to this reset instead of reaching for a reboot.
+
+**After resetting, ALL `portproxy` rules are gone and must be re-added from
+scratch**, one port at a time, verifying each with `netstat` before moving to the
+next — this verification step is what would have caught the corruption much
+earlier, since a healthy rule shows a real `LISTENING` line and a corrupted one
+shows nothing:
+```powershell
+netsh interface portproxy add v4tov4 listenaddress=<IP> listenport=<port> connectaddress=127.0.0.1 connectport=<port>
+netstat -ano | findstr :<port>
+```
+Expect to see something like:
+```
+TCP    <IP>:<port>       0.0.0.0:0        LISTENING       <pid>
+```
+If that line doesn't appear immediately after adding a rule, don't move on to the
+next port — the corruption may still be present, or something else is wrong;
+investigate before re-adding the rest.
+
+**Lesson for next time:** if multiple previously-solid ports all fail
+simultaneously with `portproxy show all` looking correct, jump straight to
+`netsh interface portproxy reset` rather than working through
+`hns`/`vmcompute`/reboot escalation — none of those address this failure mode,
+and a reboot in particular costs real downtime for zero benefit here.
+
+---
+
 ## 5. Symptom: external access broke completely after enabling mirrored mode
 
 **What happened:** after switching to `networkingMode=mirrored`, *nothing* was

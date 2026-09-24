@@ -113,7 +113,9 @@ for IMAGE in "${!IMAGE_SERVICE_MAP[@]}"; do
     # Record image ID after pull
     ID_AFTER=$(get_image_id "$IMAGE")
 
-    CONTAINER_RUNNING=$(docker compose -f "$COMPOSE_FILE" ps --status running 2>/dev/null | grep -c "^$PRIMARY_SERVICE")
+    # NOTE: match against the Service column, anchored, not the default NAME
+    # column (which is prefixed "www-...-1" and never matched PRIMARY_SERVICE).
+    CONTAINER_RUNNING=$(docker compose -f "$COMPOSE_FILE" ps --status running --format '{{.Service}}' 2>/dev/null | grep -c "^${PRIMARY_SERVICE}$")
 
     if [ "$ID_BEFORE" = "$ID_AFTER" ] && [ "$CONTAINER_RUNNING" -gt 0 ]; then
         log_skip  "No changes        → ${SHORT_IMAGE}"
@@ -124,12 +126,15 @@ for IMAGE in "${!IMAGE_SERVICE_MAP[@]}"; do
     log_info  "New image detected → restarting..."
 
     for SERVICE in $SERVICES; do
-        # ...restart logic...
+        log_info  "  Restarting       → ${SERVICE}"
+        log_service "$SERVICE" "Image updated ($IMAGE). Restarting..."
+
+        docker compose -f "$COMPOSE_FILE" up -d --no-deps "$SERVICE" \
+            >> "$LOG_DIR/${SERVICE}.log" 2>&1
 
         if [ $? -eq 0 ]; then
             log_ok    "  Restarted        → ${SERVICE}"
             log_service "$SERVICE" "Restart successful."
-            # Only sync assets for the primary web service
             if [ "$SERVICE" = "$PRIMARY_SERVICE" ]; then
                 copy_public_assets "$SERVICE"
             fi
